@@ -47,7 +47,7 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
             let bar = Rect::from_min_max(pos2(full.left() - left as f32, full.top()), pos2(full.right() + 12.0, full.bottom()));
             // The field stops short of the filter icon and the seven icons on the right; centred,
             // it is twice the room between the window's centre and them.
-            let mut sw = 640.0f32.min(2.0 * (full.right() - 310.0 - bar.center().x)).max(190.0);
+            let mut sw = 640.0f32.min(2.0 * (full.right() - 455.0 - bar.center().x)).max(190.0);
             if !app.native_menu {
                 // leave room for the in-window menus left of the (centred) search field
                 let menus_right = full.left() + 140.0 + crate::menubar::bar_width(ui) + 24.0;
@@ -63,6 +63,16 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
             filter_button(app, ui, &t, sr);
             let x = right_icons(app, ui, &t, full);
             appearance_button(app, ui, &t, full, x);
+            let rect = Rect::from_center_size(pos2(x - 94., full.center().y), vec2(142., 28.));
+            let response = ui.put(
+                rect,
+                egui::Button::new(egui::RichText::new(format!("Align Photos {}", crate::alignment::BUILD_VERSION)).color(egui::Color32::WHITE))
+                    .fill(egui::Color32::from_rgb(42, 119, 204)),
+            );
+            register(ui, "alignment.open", response.rect);
+            if response.clicked() {
+                let _ = app.run("dialog.alignment", json!({}));
+            }
         });
     if let Some(slot) = slot {
         ui.ctx().layer_painter(ui.layer_id()).set(slot, egui::Shape::rect_filled(panel.response.rect, 0.0, t.chrome));

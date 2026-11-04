@@ -63,6 +63,10 @@ pub fn may_close(app: &mut LightcraftApp) -> bool {
     if app.quit_confirmed {
         return true;
     }
+    if app.session.alignment.dirty {
+        crate::alignment::request_quit(app);
+        return false;
+    }
     // before the library is touched: a Cancel here keeps working with it
     let running = app.session.activity.running_cancellable();
     let mut names = running.iter().map(|t| crate::i18n::tr(&t.label)).collect::<Vec<_>>();
@@ -78,13 +82,6 @@ pub fn may_close(app: &mut LightcraftApp) -> bool {
     }
     if app.alignment.busy() {
         app.quit_prompt = Some(QuitPrompt::Unsaved("An alignment job is still running. Cancel to let it finish, or Quit Anyway to stop it.".into()));
-        return false;
-    }
-    if app.session.alignment.dirty
-        && let Err(e) = app.session.execute("alignment.save", &serde_json::json!({}))
-    {
-        app.alignment.open = true;
-        app.quit_prompt = Some(QuitPrompt::Unsaved(format!("The alignment set has unsaved changes: {e}. Cancel and save it in Align Photos.")));
         return false;
     }
     if app.session.unsaved().is_none() {

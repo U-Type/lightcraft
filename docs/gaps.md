@@ -181,4 +181,4 @@ Beta-blocking gaps (B) total **~230–430 h**; with the stability and platform w
 
 ## U-Type alignment fork
 
-The independent before/after alignment workspace is tracked in [alignment/README.md](alignment/README.md). It is an extension outside the upstream Lightroom-parity counts; those counts are unchanged. Windows runtime verification, representative dental-image evaluation, high-bit-depth export and advanced downsampling remain open.
+The independent before/after alignment workspace is tracked in [alignment/README.md](alignment/README.md). It is an extension outside the upstream Lightroom-parity counts; those counts are unchanged. The user verified the initial Windows build and alignment workflow. The v0.1 UI overhaul adds the toolbar shortcut, three viewports, editable membership and durable working backups; its Windows acceptance, representative dental-image evaluation, high-bit-depth export and advanced downsampling remain open.

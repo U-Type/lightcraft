@@ -78,3 +78,63 @@ fn separate_exports_same_size_never_overwrite() {
     }
     std::fs::remove_dir_all(dir).unwrap();
 }
+
+#[test]
+fn alignment_working_backup_and_membership() {
+    let (mut s, ids) = session();
+    let p = aligned(&s, &ids);
+    s.alignment.replace(p.clone());
+    let dir = std::env::temp_dir().join(format!("lc-backup-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let path = dir.join("set.lcalign.json");
+    s.execute("alignment.save", &json!({"path":path})).unwrap();
+    let mut edited = p.clone();
+    edited.name = "Edited".into();
+    s.execute("alignment.replace", &json!({"project":edited})).unwrap();
+    let backup = crate::alignment::backup_path(path.to_str().unwrap());
+    assert_eq!(Project::load(&backup).unwrap(), edited);
+    assert_eq!(Project::load(path.to_str().unwrap()).unwrap(), p);
+    assert!(s.alignment.dirty);
+    let third = s.catalog.photos().nth(2).unwrap().id;
+    s.execute("alignment.add", &json!({"ids":[third.0]})).unwrap();
+    assert_eq!(s.alignment.project.as_ref().unwrap().members.len(), 3);
+    s.execute("alignment.reference", &json!({"index":1})).unwrap();
+    assert_eq!(s.alignment.project.as_ref().unwrap().members[0].photo, ids[1]);
+    assert!(s.alignment.project.as_ref().unwrap().transform(1).unwrap().rms < 1e-8);
+    s.execute("alignment.remove", &json!({"index":2})).unwrap();
+    assert_eq!(s.alignment.project.as_ref().unwrap().members.len(), 2);
+    s.execute("alignment.discard", &json!({})).unwrap();
+    assert!(!std::path::Path::new(&backup).exists());
+    assert_eq!(Project::load(path.to_str().unwrap()).unwrap(), p);
+    std::fs::remove_dir_all(dir).unwrap();
+}
+#[test]
+fn alignment_default_names_and_recovery() {
+    use lightcraft_catalog::{Op, Photo, PhotoId, Source};
+    let (mut s, _) = session();
+    let dir = std::env::temp_dir().join(format!("lc-recovery-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let mut ids = Vec::new();
+    for (i, name) in ["Before.jpg", "After.jpg"].iter().enumerate() {
+        let id = PhotoId(9000 + i as u64);
+        let photo = Photo::new(id, Source::File { path: dir.join(name).to_string_lossy().into() }, name, "JPEG", 100, 100, "");
+        s.catalog.apply(Op::AddPhoto { photo: Box::new(photo) }).unwrap();
+        ids.push(id.0);
+    }
+    s.execute("alignment.create", &json!({"ids":ids})).unwrap();
+    let path = s.alignment.path.clone().unwrap();
+    assert!(path.ends_with("Before_After.lcalign.json"));
+    let mut p = s.alignment.project.clone().unwrap();
+    p.name = "Recovered edits".into();
+    s.execute("alignment.replace", &json!({"project":p})).unwrap();
+    // Simulate losing only the in-memory workspace, leaving the durable working copy.
+    s.alignment = Default::default();
+    s.execute("alignment.create", &json!({"ids":ids})).unwrap();
+    assert_eq!(s.alignment.project.as_ref().unwrap().name, "Recovered edits");
+    let mut named = p.clone();
+    named.members[0].name = "非常に長いファイル名abcdefghijklmnop.jpg".into();
+    let name = named.default_path().unwrap();
+    assert!(name.ends_with("+1.lcalign.json"));
+    s.execute("alignment.discard", &json!({})).unwrap();
+    std::fs::remove_dir_all(dir).unwrap();
+}

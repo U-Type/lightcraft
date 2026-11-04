@@ -16,12 +16,14 @@ fn alignment_workspace_renders_and_guards_unsaved_quit() {
     crate::alignment::open(&mut h.app).unwrap();
     h.settle(Duration::from_secs(10));
     assert!(!crate::panels::notices::may_close(&mut h.app));
-    assert!(h.app.quit_prompt.is_some());
-    h.app.quit_prompt = None;
+    crate::alignment::test_cancel_close(&mut h);
     // The synthetic textures make this screenshot deterministic and avoid dependence on a GPU or camera file.
     super::alignment::test_images(&mut h);
     let image = h.snapshot(Duration::from_secs(10));
     assert_eq!(image.size, [1600, 1100]);
+    for name in ["alignment.reference", "alignment.target", "alignment.result"] {
+        assert!(h.app.widgets.iter().any(|(id, _)| id == name), "missing viewport {name}");
+    }
     if let Ok(path) = std::env::var("LIGHTCRAFT_ALIGNMENT_SCREENSHOT") {
         let pixels =
             lightcraft_raster::Rgba8 { width: image.size[0], height: image.size[1], data: image.pixels.iter().map(|p| p.to_array()).collect() };
@@ -47,6 +49,7 @@ fn alignment_workspace_renders_and_guards_unsaved_quit() {
     assert_eq!(h.app.session.alignment.project.as_ref().unwrap().members[1].points.len(), 3);
     h.app.session.execute("alignment.undo", &serde_json::json!({})).unwrap();
     assert_eq!(h.app.session.alignment.project.as_ref().unwrap(), &p);
+    crate::alignment::test_wheel(&mut h);
 }
 
 #[test]

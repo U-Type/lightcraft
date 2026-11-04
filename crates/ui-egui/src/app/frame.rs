@@ -257,7 +257,7 @@ impl LightcraftApp {
         // once its own dialog and asynchronous library picker are gone, so `blocks_file_drops`
         // only holds them back until then. Mark those drops: once the barrier opens they may find
         // a dialog, Lightroom import or import that the library's own open started still running.
-        if panels::notices::blocks_input(self) || panels::library_problem::blocks_file_drops(self) {
+        if panels::notices::blocks_input(self) || self.alignment.prompt_layer().is_some() || panels::library_problem::blocks_file_drops(self) {
             self.defer_dropped_files();
         } else {
             self.import_dropped_files(ctx);

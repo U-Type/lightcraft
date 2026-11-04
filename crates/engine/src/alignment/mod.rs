@@ -40,9 +40,13 @@ pub struct State {
     pub revision: u64,
     pub undo: Vec<Project>,
     pub redo: Vec<Project>,
+    pub backup_error: Option<String>,
 }
 impl State {
     pub fn replace(&mut self, p: Project) {
+        if self.project.as_ref() == Some(&p) {
+            return;
+        }
         if let Some(old) = self.project.replace(p) {
             self.undo.push(old);
             if self.undo.len() > 100 {
@@ -69,6 +73,20 @@ pub fn geometry(p: &lightcraft_catalog::Photo) -> Value {
     json!({"width":p.width,"height":p.height,"crop":s.crop,"geometry":s.geometry,"orientation":s.orientation,"optics":s.optics,"embeddedLens":p.embedded_lens,"disabledGeometry":s.disabled_sections.iter().filter(|v|matches!(v.as_str(),"crop"|"geometry"|"optics")).collect::<Vec<_>>()})
 }
 impl Project {
+    /// Suggested name is Unicode-safe and shared by the UI and command API.
+    pub fn default_path(&self) -> Option<String> {
+        let first = self.members.first()?;
+        let Source::File { path } = &first.source else { return None };
+        let names: Vec<_> =
+            self.members.iter().map(|m| std::path::Path::new(&m.name).file_stem().and_then(|s| s.to_str()).unwrap_or("photo").to_string()).collect();
+        let joined = names.join("_");
+        let name = if joined.chars().count() <= 15 {
+            joined
+        } else {
+            format!("{}+{}", names.first()?.chars().take(15).collect::<String>(), self.members.len().saturating_sub(1))
+        };
+        Some(std::path::Path::new(path).parent()?.join(format!("{name}.lcalign.json")).to_string_lossy().into_owned())
+    }
     pub fn create(s: &Session, ids: &[PhotoId], name: String) -> Result<Self> {
         if !(2..=32).contains(&ids.len()) {
             return Err("select 2–32 imported photos".into());
@@ -184,4 +202,29 @@ impl Project {
 }
 pub fn warp_preview(image: &lightcraft_raster::Rgba8, t: &Transform, w: usize, h: usize) -> Result<lightcraft_raster::Rgba8> {
     lightcraft_merge::registration::warp(image, t, [0., 0., 1., 1.], w, h)
+}
+
+/// A working copy never changes the explicit saved-project checkpoint.
+pub fn backup_path(path: &str) -> String {
+    format!("{}.working.lcalign.json", path.strip_suffix(".lcalign.json").unwrap_or(path))
+}
+pub fn backup(s: &mut Session) {
+    let result = match (&s.alignment.project, &s.alignment.path) {
+        (Some(p), Some(path)) => p.save(s, &backup_path(path)),
+        (Some(_), None) => Err("Choose Save As to enable working backups for this set.".into()),
+        _ => Ok(()),
+    };
+    s.alignment.backup_error = result.err();
+}
+pub fn remove_backup(s: &Session) -> Result<()> {
+    if let Some(path) = &s.alignment.path {
+        let path = backup_path(path);
+        s.check_write_target(&path)?;
+        match std::fs::remove_file(path) {
+            Ok(()) => {}
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+            Err(e) => return Err(e.to_string()),
+        }
+    }
+    Ok(())
 }

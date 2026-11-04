@@ -2,19 +2,27 @@
 
 This branch adds **Photo → Align Photos…** for independently exporting aligned before/after photographs. It does not stitch or blend them into a panorama and never changes an original or its Develop settings.
 
-## Workflow
+## Workflow — custom UI v0.1
 
-1. Import photographs into a library, select 2–32, and make the intended reference the active selection.
-2. Open **Photo → Align Photos…**, then **New from selection**. The first member is the reference.
-3. Choose a target. Click a landmark in the left image, then its counterpart on the right. Repeat. Drag numbered markers or edit their normalized coordinates in the table. Right-drag pans both images; Linked zoom and the cursor magnifier help placement.
-4. Start with **Rotation + scale** (two distinct pairs). One pair supports position only; affine needs three non-collinear pairs; perspective needs four well-distributed pairs. Additional pairs produce a weighted least-squares fit. Individual pairs can be disabled or weighted; manual pairs are never silently discarded.
-5. With an empty target, **Suggest points** tries feature matching plus deterministic RANSAC. Failure leaves the project unchanged. Review the proposed landmarks and fit visually. Automatic matching is an aid, not a guarantee for different viewpoints or lighting.
-6. Review using Overlay, Split, Difference or Blink. Point pairs always shows the unwarped developed photographs. Local warp is explicitly selected and stored in the project; it can change the apparent shape of anatomy. Use unwarped comparisons when interpreting before/after changes.
-7. Use **Common crop**, or enter reference-relative x/y/width/height. The yellow rectangle in comparison views marks the output crop. Set output width and use **Match crop aspect** to avoid stretching; independent dimensions are available intentionally.
-8. Choose a project filename ending in `.lcalign.json` and **Save**. Save before opening another set. A saved set can be reopened after restarting with the same library. Multiple sidecars can reference the same photos independently.
-9. Choose a new output folder and **Export separate images**. Exports have identical dimensions and framing, ordered names, and the photos' current Develop edits. Existing files and originals are never overwritten. PNG preserves uncovered areas as transparent; JPEG refuses uncovered areas, so use Common crop first.
+1. Import and select 2–32 photos. Make the intended reference active, then press the blue **Align Photos v0.1** button immediately left of Appearance Mode. The Photo menu opens the same workspace. Selection loads automatically; an existing modified set prompts before replacement.
+2. The resizable left panel contains Project, Set, Alignment and Export sections. Drag its right edge to resize. The Set list highlights the photo in the active viewport. Click a viewport to focus it (blue outline), then choose a photo in the list. Choosing a different reference remaps existing landmarks into that reference and resets the common crop; it requires a fitted replacement if landmarks already exist. Review and undo this operation if necessary, especially for local warps.
+3. **Add photos…** opens a searchable thumbnail grid of imported catalog photos. Select multiple tiles and press Add selected. **Import new photos…** opens the normal import workflow; return to the picker to add the newly imported photos. Remove selected photo removes only set membership, not a catalog photo or its file. Keep at least two photos. Removing a reference chooses a fitted replacement (or the next photo when no landmarks exist).
+4. Place landmarks in the upper left reference and upper right target: click left, then the corresponding position right. Drag markers to refine. Rotation + scale needs two distinct pairs; affine three non-collinear pairs; perspective four well-distributed pairs. Local warp changes shape; retain unwarped comparisons when interpreting anatomical changes. Suggest points works only on an empty target.
+5. The horizontal **display options bar** stays above the viewports. Wheel over a viewport to zoom around the cursor; right-drag to pan. Toggle **Linked zoom / pan** for the upper pair. The lower result has independent navigation; **Lock result zoom / pan** couples it to the upper views. **Invert wheel zoom** reverses direction. Fit active resets the focused viewport and any linked views.
+6. The lower viewport continuously shows Overlay, Split, Difference or Blink while the upper landmark views remain visible. Click the result viewport then a Set list entry to choose its target independently. The reference can also be shown alone here. The yellow rectangle marks the shared output crop.
+7. In Export, use Common crop or edit reference-relative x/y/width/height. Set Width, then Match crop aspect. Pick an output folder and Export separate images. Current Develop edits are rendered from the originals; all outputs share framing and dimensions. PNG preserves uncovered pixels as transparent; JPEG refuses them. Existing exports are never overwritten.
 
-Close the Align window to work in normal Develop, then reopen it. Photometric edits invalidate only the displayed preview; click Refresh edits / previews. Geometry changes block comparison/export until reviewed: **Remap landmarks through changed geometry** maps points through their source coordinates. If a point falls outside the new crop, widen the crop or use **Reset affected landmarks**. A change to the reference geometry resets the shared crop; review it again. Remapping and resets have alignment undo/redo.
+## Projects, working backups and closing
+
+The proposed project path is beside the reference photo (also for mixed-folder sets). Filename stems are joined with `_` when the combined name is at most 15 Unicode characters; otherwise the first stem is truncated to 15 characters followed by `+N`, the number of additional photos. The extension is `.lcalign.json`. Unrelated sets with the same suggested name get a numbered suffix rather than being overwritten.
+
+Every successful alignment edit, membership change and undo/redo writes a separate `NAME.working.lcalign.json` backup atomically. A backup never marks the project explicitly saved and never replaces an existing saved checkpoint. Write failures remain visible, with edits retained in memory. Demo photos have no source folder: use Save As to enable backups.
+
+Closing the alignment window, quitting LightCraft, or replacing a modified set asks **Save / Discard / Save As / Cancel**. Save writes the checkpoint; Save As writes to the chosen filename and then completes the pending close; cancelling the file picker leaves the close prompt open. Cancel preserves the workspace. Discard removes the working copy and leaves the last saved checkpoint unchanged. Errors keep the prompt open.
+
+Opening the same selection after a crash restores its matching working copy. Open can also select a working copy explicitly; its saved-project path is normalized back to the ordinary `.lcalign.json` name. All sidecars require the same catalog/source identities. Reference changes or changed membership may change the suggested filename on a later new selection; use Open for those saved sets.
+
+Close the alignment window to work in Develop, then reopen it. Photometric changes refresh previews while retaining landmarks. Geometry changes block export/comparison until **Remap landmarks through changed geometry** or **Reset affected landmarks**. Remapping a point outside the new crop reports an error; a changed reference resets the shared crop. These operations are undoable.
 
 ## Current boundaries
 
@@ -23,9 +31,9 @@ Close the Align window to work in normal Develop, then reopen it. Photometric ed
 - Preview long edge is 1200 px; exports render from the original with current Develop settings at native developed resolution. The preview is never used as the export source. The final alignment sampler is bilinear; high-bit-depth output and more advanced minification filtering remain follow-up quality work.
 - Local warp uses a regularized thin-plate spline. Sampled Jacobian checks reject folds/collapse; this is not a proof that every unsampled location is fold-free. Common crop is a conservative 256×256 grid approximation, particularly for local warps.
 - Maximum 128 pairs per target, 32 members, and 100 million output pixels. Full developed sources above 100 MP are refused. Full-resolution export processes one image at a time. Cancel stops between images; completed files remain and the error reports their count.
-- A reference is chosen at creation. To change it, create another set. Source identity changes or a different catalog require creating/rebinding the set rather than silently guessing matches.
-- Alignment undo/redo is separate from ordinary Develop undo/redo. Save is explicit; quitting retries saving a previously named set, or prompts before discarding unsaved work. Closing the workspace window keeps its in-memory set.
-- Actual Windows runtime and representative dental-photo acceptance testing are still required. Synthetic tests do not establish clinical accuracy.
+- Changing the reference remaps landmark coordinates using the existing fitted transform, then refits each member. Review results after rebasing, especially local warps. Source identity changes or a different catalog require creating/rebinding the set rather than silently guessing matches.
+- Alignment undo/redo is separate from ordinary Develop undo/redo. Explicit saves and automatic working backups are separate; modified sets prompt on close or quit.
+- The initial alignment implementation was successfully built and tested by the user on Windows. This v0.1 UI overhaul still needs Windows acceptance testing. Synthetic tests do not establish clinical accuracy.
 
 ## Layout and maintenance
 
@@ -49,3 +57,7 @@ Keep `main` tracking upstream and use `alignment` for the custom app. For each u
 - Verify PNG transparency and JPEG uncovered-area rejection. Export twice to the same folder: the second attempt must refuse to overwrite.
 - Close/quit with an unnamed modified set and with a running export; cancellation must preserve the set.
 - Review local-warp results against the original photographs and representative viewpoints/lighting.
+
+## Build numbering
+
+`crates/ui-egui/src/alignment.rs` owns `BUILD_VERSION`. This first numbered UI build is **v0.1**. Increment once per subsequent prepared user build (v0.2, v0.3, ...), not per development commit. Preserve this convention when preparing updates; the main application version remains upstream's version.

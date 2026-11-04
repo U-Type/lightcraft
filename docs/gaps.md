@@ -178,3 +178,7 @@ Beta-blocking gaps (B) total **~230–430 h**; with the stability and platform w
 | 2026-10-24 | patch | LR-META-XMP: sidecar keywords are written as names in `dc:subject` and paths in `lr:hierarchicalSubject`, so other DAMs can search them; ranked gaps and estimates unchanged |
 | 2026-10-20 | minor | Opt-in Windows DirectComposition preference added; VRR hardware verification pending; parity counts unchanged |
 | 2026-10-25 | minor | Gap 1: first chart-calibrated model, the Canon EOS D60 (ColorChecker Classic under tungsten and sun, `crates/raw/src/chart_table.rs`); the gap stays open, hours unchanged |
+
+## U-Type alignment fork
+
+The independent before/after alignment workspace is tracked in [alignment/README.md](alignment/README.md). It is an extension outside the upstream Lightroom-parity counts; those counts are unchanged. Windows runtime verification, representative dental-image evaluation, high-bit-depth export and advanced downsampling remain open.

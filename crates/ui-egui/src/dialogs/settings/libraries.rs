@@ -8,6 +8,9 @@ use super::{LightcraftApp, Value, json};
 /// library it would move the folder on disk with nothing to relink, leaving this library's photos
 /// missing (issue #3140).
 pub(crate) fn can_switch_library(app: &LightcraftApp) -> Result<(), String> {
+    if app.session.alignment.dirty || app.alignment.busy() {
+        return Err("Save/discard the alignment set and wait for alignment jobs before switching libraries".into());
+    }
     if crate::lightroom_import::is_running(app) {
         return Err("wait for Lightroom catalog import to finish before switching libraries".into());
     }

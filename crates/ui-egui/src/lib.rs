@@ -71,6 +71,9 @@ pub use dialogs::credits;
 pub use dialogs::import;
 pub use dialogs::lightroom_destination;
 pub use dialogs::merge;
+pub mod alignment;
+#[cfg(test)]
+mod alignment_tests;
 pub use dialogs::print_view;
 pub use dialogs::slideshow_export;
 pub use dialogs::updates_ui;
@@ -308,6 +311,7 @@ pub struct LightcraftApp {
     pub(crate) compare_hold_until: f64,
     /// Photo Merge dialog previews and background merges.
     pub merge: merge::MergeState,
+    pub alignment: alignment::Workspace,
     /// An import in progress (the import review dialog's batches).
     pub import: Option<import::ImportTask>,
     /// A folder scan in progress (feeds the import review).

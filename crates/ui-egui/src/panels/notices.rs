@@ -76,6 +76,17 @@ pub fn may_close(app: &mut LightcraftApp) -> bool {
         app.quit_prompt = Some(QuitPrompt::Tasks(tasks_message(names.len(), &names.join(", "))));
         return false;
     }
+    if app.alignment.busy() {
+        app.quit_prompt = Some(QuitPrompt::Unsaved("An alignment job is still running. Cancel to let it finish, or Quit Anyway to stop it.".into()));
+        return false;
+    }
+    if app.session.alignment.dirty
+        && let Err(e) = app.session.execute("alignment.save", &serde_json::json!({}))
+    {
+        app.alignment.open = true;
+        app.quit_prompt = Some(QuitPrompt::Unsaved(format!("The alignment set has unsaved changes: {e}. Cancel and save it in Align Photos.")));
+        return false;
+    }
     if app.session.unsaved().is_none() {
         return true;
     }

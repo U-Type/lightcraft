@@ -15,6 +15,7 @@
 extern crate lightcraft_denoise_core as lightcraft_denoise;
 
 pub mod activity;
+pub mod alignment;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod apple_photos;
 pub mod availability;
@@ -225,6 +226,7 @@ static VISIBLE_GEN: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64:
 static LIBRARY_GEN: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
 
 pub struct Session {
+    pub alignment: alignment::State,
     library_generation: u64,
     /// Auto Sync: edits to the active photo also change the other selected photos (the settings
     /// that changed, nothing else).
@@ -504,6 +506,7 @@ impl Session {
             xmp: sidecar::XmpPrefs::default(),
             last_export: None,
             last_merge: Default::default(),
+            alignment: Default::default(),
             export_presets: Vec::new(),
             print: Default::default(),
             print_templates: Vec::new(),

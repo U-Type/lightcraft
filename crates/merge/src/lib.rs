@@ -23,6 +23,7 @@ pub mod output;
 pub mod pano;
 pub mod ransac;
 pub mod refine;
+pub mod registration;
 pub mod synth;
 
 pub use frame::{Frame, FrameColor, RawColour, load_frame, load_frame_with};

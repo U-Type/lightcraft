@@ -48,7 +48,8 @@ impl LightcraftApp {
     /// Whether the app asks for a newer release when it starts (off until the desktop app turns it on).
     #[cfg(not(target_arch = "wasm32"))]
     pub fn set_startup_update_check(&mut self, on: bool) {
-        self.updates_rt.startup_check = on;
+        // Official releases do not contain this fork's alignment workspace.
+        self.updates_rt.startup_check = on && !crate::alignment::CUSTOM_BUILD;
     }
 }
 
@@ -66,6 +67,9 @@ pub(crate) fn blocks_input(app: &LightcraftApp) -> bool {
 }
 
 pub(crate) fn check(app: &mut LightcraftApp) -> Result<Value, String> {
+    if crate::alignment::CUSTOM_BUILD {
+        return Err("This is the custom alignment build. Update it from the U-Type/lightcraft alignment branch; an official updater would replace these modifications.".into());
+    }
     #[cfg(not(target_arch = "wasm32"))]
     {
         app.updates_rt.check_requested = true;

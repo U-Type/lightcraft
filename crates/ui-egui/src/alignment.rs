@@ -566,6 +566,7 @@ fn points(
             } else {
                 p.target = q;
             }
+            changed = true;
         }
         if response.clicked() && nearest.is_none() {
             if side == 0 {

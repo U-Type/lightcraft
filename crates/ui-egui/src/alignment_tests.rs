@@ -48,3 +48,41 @@ fn alignment_workspace_renders_and_guards_unsaved_quit() {
     h.app.session.execute("alignment.undo", &serde_json::json!({})).unwrap();
     assert_eq!(h.app.session.alignment.project.as_ref().unwrap(), &p);
 }
+
+#[test]
+fn dragging_landmark_persists_across_frames() {
+    let session = Session::with_demo();
+    let ids: Vec<_> = session.catalog.photos().take(2).map(|p| p.id).collect();
+    let mut p = Project::create(&session, &ids, "Drag".into()).unwrap();
+    p.members[1].points = vec![Pair::new([0.25, 0.35], [0.28, 0.34]), Pair::new([0.7, 0.65], [0.73, 0.64])];
+    let mut h = Headless::new(LightcraftApp::new(session, Services::default()), [1600., 1100.], 1.);
+    h.app.session.alignment.replace(p);
+    crate::alignment::open(&mut h.app).unwrap();
+    h.settle(Duration::from_secs(10));
+    super::alignment::test_images(&mut h);
+    h.settle(Duration::from_secs(10));
+    let rect = h.app.widgets.iter().find(|(id, _)| id == "alignment.target").map(|(_, r)| *r).unwrap();
+    let start = rect.min + egui::vec2(rect.width() * 0.28, rect.height() * 0.34);
+    let end = start + egui::vec2(30., 20.);
+    h.app.synthetic.push(egui::Event::PointerMoved(start));
+    h.app.synthetic.push(egui::Event::PointerButton {
+        pos: start,
+        button: egui::PointerButton::Primary,
+        pressed: true,
+        modifiers: Default::default(),
+    });
+    h.step();
+    h.app.synthetic.push(egui::Event::PointerMoved(end));
+    h.step();
+    h.app.synthetic.push(egui::Event::PointerButton {
+        pos: end,
+        button: egui::PointerButton::Primary,
+        pressed: false,
+        modifiers: Default::default(),
+    });
+    h.step();
+    h.settle(Duration::from_secs(10));
+    let target = h.app.session.alignment.project.as_ref().unwrap().members[1].points[0].target;
+    assert!((target[0] - (0.28 + 30. / f64::from(rect.width()))).abs() < 0.001);
+    assert!((target[1] - (0.34 + 20. / f64::from(rect.height()))).abs() < 0.001);
+}
